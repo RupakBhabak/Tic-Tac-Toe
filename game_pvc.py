@@ -1,0 +1,189 @@
+import tkinter as tk
+from ai import check_for_win, computer_next_turn
+from random import choice
+from time import sleep
+
+#Global Variables
+board_data = [[0, 0, 0],
+              [0, 0, 0],
+              [0, 0, 0]]
+boxes = [[0, 0, 0],
+         [0, 0, 0],
+         [0, 0, 0]]
+player_symbol = ""
+computer_symbol = ""
+
+def show_popup(text, game, root):
+    popup = tk.Toplevel(game)
+    popup.title("Result")
+    popup.geometry("300x200")
+    popup.grab_set()
+
+    popup.update_idletasks()
+    x = (popup.winfo_screenwidth() - popup.winfo_width()) // 2
+    y = (popup.winfo_screenheight() - popup.winfo_height()) // 2
+    popup.geometry(f"+{x}+{y}")
+
+    label = tk.Label(popup, text=f"{text}")
+    label.pack(pady=10)
+
+    def close_all():
+        popup.destroy()
+        game.destroy()
+        root.deiconify() 
+
+    close_button = tk.Button(popup, text="OK", command=close_all)
+    close_button.pack(pady=5)
+
+def show_result(key, game, root):
+    if key == 1:
+        show_popup("You have won this game!", game, root)
+    elif key == 2:
+        show_popup("Computer has won this game!", game, root)
+    else:
+        show_popup("Game has tied!", game, root)
+
+def check_for_draw(board_data):
+    for i in range(len(board_data)):
+        if board_data[i] == 0:
+            return False
+    return True
+
+def set_winning_ui(board_data, box_data, key):
+    WIN_MATCHES = [[1, 2, 3], [4, 5, 6], [7, 8, 9], [1, 4, 7], [2, 5, 8], [3, 6, 9], [1, 5, 9], [3, 5, 7]]
+
+    for i in range(len(WIN_MATCHES)):
+        current_case = WIN_MATCHES[i]
+        if key == 1:
+            if (board_data[current_case[0]-1] == 1 and board_data[current_case[1]-1] == 1 and board_data[current_case[2]-1] == 1):
+                for pos in current_case:
+                    row = (pos - 1) // 3
+                    col = (pos - 1) % 3
+                    box_data[row][col].config(bg="green", fg="white")
+                    box_data[row][col].update()
+
+        else:
+            if (board_data[current_case[0]-1] == -1 and board_data[current_case[1]-1] == -1 and board_data[current_case[2]-1] == -1):
+                for pos in current_case:
+                    row = (pos - 1) // 3
+                    col = (pos - 1) % 3
+                    box_data[row][col].config(bg="green", fg="white")
+                    box_data[row][col].update()
+
+def on_click_box(row, col, info, game, root, back):
+    global board_data, player_symbol, computer_symbol, boxes
+    modified_board_data = []
+
+    if (boxes[row][col]['text'] == ""):
+        boxes[row][col]['text'] = player_symbol
+        boxes[row][col].config(fg="blue")
+        board_data[row][col] = 1
+        boxes[row][col].update()
+
+        for i in range(3):
+            for j in range(3):
+                modified_board_data.append(board_data[i][j])
+
+        if check_for_win(modified_board_data):
+            set_winning_ui(modified_board_data, boxes, 1)
+            show_result(1, game, root)
+            return
+        if check_for_draw(modified_board_data):
+            show_result(3, game, root)
+            return
+
+        for i in range(3):
+            for j in range(3):
+                boxes[i][j].config(state="disabled")
+        back.config(state="disabled")
+
+        sleep(1)
+
+        info.config(text=f"Computer's turn ({computer_symbol})")
+        info.update()
+
+        inp = computer_next_turn(modified_board_data)
+        modified_board_data[inp] = -1
+
+        k = 0
+        for i in range(3):
+            for j in range(3):
+                board_data[i][j] = modified_board_data[k]
+                if k == inp:
+                    boxes[i][j]['text'] = computer_symbol
+                    boxes[i][j].config(fg="red")
+                    boxes[i][j].update()
+                k += 1
+
+        for i in range(3):
+            for j in range(3):
+                boxes[i][j].config(state="normal")
+        back.config(state="normal")
+
+        if check_for_win(modified_board_data, "c"):
+            set_winning_ui(modified_board_data, boxes, 2)
+            show_result(2, game, root)
+            return
+        if check_for_draw(modified_board_data):
+            show_result(3, game, root)
+            return
+
+        info.config(text=f"Player's turn ({player_symbol})")
+        info.update()
+
+def back_to_menu(game, root):
+    game.destroy()
+    root.deiconify()
+
+def render_game_pvc(root):
+    global boxes, player_symbol, computer_symbol, board_data
+
+    board_data = [[0, 0, 0],
+                 [0, 0, 0],
+                 [0, 0, 0]]
+    boxes = [[0, 0, 0],
+             [0, 0, 0],
+             [0, 0, 0]]
+
+    root.withdraw()
+    game = tk.Toplevel()
+    game.title("Player vs Computer")
+    
+    player_symbol = choice(["X", "O"])
+    if player_symbol == "X":
+        computer_symbol = "O"
+    else:
+        computer_symbol = "X"
+
+    WINDOW_WIDTH = 500
+    WINDOW_HEIGHT = 600
+    X = int((root.winfo_screenwidth() - WINDOW_WIDTH) / 2)
+    Y = int((root.winfo_screenheight() - WINDOW_HEIGHT) / 2)
+    game.geometry(f"{WINDOW_WIDTH}x{WINDOW_HEIGHT}+{X}+{Y}")
+
+    game_frame = tk.Frame(game)
+    game_frame.columnconfigure(0, weight=1)
+    game_frame.columnconfigure(1, weight=1)
+    game_frame.columnconfigure(2, weight=1)
+
+    game_frame.rowconfigure(0, weight=1)
+    game_frame.rowconfigure(1, weight=1)
+    game_frame.rowconfigure(2, weight=1)
+    game_frame.rowconfigure(3, weight=1)
+    game_frame.rowconfigure(4, weight=1)
+
+    info = tk.Label(game_frame, text=f"Player's turn ({player_symbol})", font=('Arial', 15))
+    info.grid(row=0, column=0, columnspan=3)
+
+    back = tk.Button(game_frame, text="BACK", font=('Arial', 20), command=lambda g=game, r=root: back_to_menu(g, r))
+    back.grid(row=4, column=0, columnspan=3)
+
+    try:
+        for i in range(1, 4):
+            for j in range(3):
+                boxes[i-1][j] = tk.Button(game_frame, text="", font=('Arial', 40, 'bold'), command=lambda row=i-1, col=j: on_click_box(row, col, info, game, root, back))
+                boxes[i-1][j].grid(row=i, column=j, sticky="nsew")
+    except:
+        pass
+
+    game_frame.pack(fill='both', expand=True)
